@@ -212,8 +212,6 @@
 
       // ── Map அசை sequence to வாய்பாடு ───────────────────────────────────────
       const VAAYPAADU_MAP = {
-        நேர்: "நாள்",
-        நிரை: "மலர்",
         "நேர்,நேர்": "தேமா",
         "நிரை,நேர்": "புளிமா",
         "நிரை,நிரை": "கருவிளம்",
@@ -420,10 +418,11 @@
           let grid = document.createElement("div");
           grid.className = "word-grid";
 
-          words.forEach((word) => {
+          words.forEach((word, wordIdx) => {
             let { asaiGroups, asaiTypes, vaaypaadu } = analyzeWord(word);
 
             // Build Table Html
+
             let rowsHtml = asaiGroups
               .map(
                 (ag) =>
@@ -434,22 +433,36 @@
                     </tr>`,
               )
               .join("");
-
+            let iruthiseer_result = null;
+            if (lineIdx === 1 && wordIdx === 2) {
+              let last_asai = asaiTypes.join(",");
+              const iruthiseer = {
+                நேர்: "நாள்",
+                நிரை: "மலர்",
+                "நேர்,நேர்": "காசு",
+                "நிரை,நேர்": "பிறப்பு",
+              };
+              function getSeer(last_asai) {
+                return iruthiseer[last_asai] || "தெரியவில்லை";
+              }
+              iruthiseer_result = getSeer(last_asai);
+            }
             let cardHtml = `
-                    <div class="word-card">
-                        <div class="word-title">${word}</div>
-                        <table>
-                            <thead>
-                                <tr><th>அசை</th><th>வகை</th><th>விதி</th></tr>
-                            </thead>
-                            <tbody>
-                                ${rowsHtml}
-                            </tbody>
-                        </table>
-                        <div class="vaaypaadu-result">வாய்பாடு: ${vaaypaadu}</div>
+                <div class="word-card">
+                    <div class="word-title">${word}</div>
+                    <table>
+                        <thead>
+                            <tr><th>அசை</th><th>வகை</th><th>விதி</th></tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                    <div class="vaaypaadu-result">
+                        வாய்பாடு:  ${iruthiseer_result ?? vaaypaadu}
                     </div>
-                `;
-
+                </div>
+            `;
             grid.insertAdjacentHTML("beforeend", cardHtml);
           });
 
