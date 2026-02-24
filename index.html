@@ -161,11 +161,15 @@
 அகர முதல எழுத்தெல்லாம் ஆதி
 பகவன் முதற்றே உலகு</textarea
       >
-      <button onclick="processKural()">பகுப்பாய்வு செய் (Analyze)</button>
+      <button onclick="processKural()">சீர் பிரிப்பு செய்</button>
     </div>
 
     <div id="output"></div>
-
+    <footer>
+      <p style="margin-top: 40px; color: var(--text-muted); font-size: 0.9em">
+        &copy; Karan
+      </p>
+    </footer>
     <script>
       // ── Unicode Constants ──────────────────────────────────────────────────
       const PULLI = "\u0BCD"; // ்
@@ -323,18 +327,18 @@
               prev.units.push(u);
               prev.surface += u.surface;
 
-              if (prev.rule === "தனிக்குறில்") prev.rule = "குறில்+மெய்";
-              else if (prev.rule === "நெடில்") prev.rule = "நெடில்+மெய்";
+              if (prev.rule === "தனிக்குறில்") prev.rule = "குறில்+ஒற்று";
+              else if (prev.rule === "நெடில்") prev.rule = "நெடில்+ஒற்று";
               else if (prev.rule === "இருக்குறில்")
-                prev.rule = "இருக்குறில்+மெய்";
+                prev.rule = "இருக்குறில்+ஒற்று";
               else if (prev.rule === "குறில்+நெடில்")
-                prev.rule = "குறில்+நெடில்+மெய்";
+                prev.rule = "குறில்+நெடில்+ஒற்று";
             } else {
               asaiList.push({
                 units: [u],
                 surface: u.surface,
                 asai_type: "நேர்",
-                rule: "தனிமெய்",
+                rule: "தனிஒற்று",
               });
             }
             i++;
