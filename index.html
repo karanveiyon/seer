@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ta">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thirukkural Yaappu Analyzer</title>
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --bg-color: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      h1 {
+        color: var(--primary);
+        text-align: center;
+        margin-bottom: 5px;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        margin-bottom: 25px;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 800px;
+        background: var(--card-bg);
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      textarea {
+        width: 100%;
+        height: 100px;
+        padding: 15px;
+        font-size: 16px;
+        font-family: inherit;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        resize: vertical;
+        box-sizing: border-box;
+        margin-bottom: 15px;
+      }
+
+      button {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        font-size: 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        width: 100%;
+        font-weight: bold;
+      }
+
+      button:hover {
+        background-color: #4338ca;
+      }
+
+      #output {
+        margin-top: 30px;
+        width: 100%;
+        max-width: 800px;
+      }
+
+      .line-section {
+        margin-bottom: 30px;
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .line-header {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: var(--primary);
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
+
+      .word-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px;
+      }
+
+      .word-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 15px;
+        background-color: #fcfcfc;
+      }
+
+      .word-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+        color: #334155;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+        font-size: 0.9em;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 8px;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f1f5f9;
+        color: #475569;
+      }
+
+      .vaaypaadu-result {
+        font-weight: bold;
+        color: var(--primary);
+        background: #e0e7ff;
+        padding: 6px 10px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-top: 5px;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>திருக்குறள் அசைப்பகுப்பு</h1>
+    <p class="subtitle">Yaappu Analyzer for Asai and Vaaypaadu</p>
+
+    <div class="container">
+      <textarea
+        id="kuralInput"
+        placeholder="குறளை இங்கே உள்ளிடவும்... (Enter Thirukkural here)"
+      >
+அகர முதல எழுத்தெல்லாம் ஆதி
+பகவன் முதற்றே உலகு</textarea
+      >
+      <button onclick="processKural()">பகுப்பாய்வு செய் (Analyze)</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+      // ── Unicode Constants ──────────────────────────────────────────────────
+      const PULLI = "\u0BCD"; // ்
+      const AAYTHAM = "\u0B83"; // ஃ
+
+      const KURIL_VOWELS = new Set(["அ", "இ", "உ", "எ", "ஒ"]);
+      const NEDIL_VOWELS = new Set(["ஆ", "ஈ", "ஊ", "ஏ", "ஓ", "ஐ", "ஔ"]);
+
+      const KURIL_SIGNS = new Set(["\u0BBF", "\u0BC1", "\u0BC6", "\u0BCA"]); // ி ு ெ ொ
+      const NEDIL_SIGNS = new Set([
+        "\u0BBE",
+        "\u0BC0",
+        "\u0BC2",
+        "\u0BC7",
+        "\u0BCB",
+        "\u0BC8",
+        "\u0BCC",
+      ]); // ா ீ ூ ே ோ ை ௌ
+
+      const MEY_CONSONANTS = new Set([
+        "க",
+        "ங",
+        "ச",
+        "ஞ",
+        "ட",
+        "ண",
+        "த",
+        "ந",
+        "ப",
+        "ம",
+        "ய",
+        "ர",
+        "ல",
+        "வ",
+        "ழ",
+        "ள",
+        "ற",
+        "ன",
+      ]);
+
+      // ── Map அசை sequence to வாய்பாடு ───────────────────────────────────────
+      const VAAYPAADU_MAP = {
+        நேர்: "நாள்",
+        நிரை: "மலர்",
+        "நேர்,நேர்": "தேமா",
+        "நிரை,நேர்": "புளிமா",
+        "நிரை,நிரை": "கருவிளம்",
+        "நேர்,நிரை": "கூவிளம்",
+        "நேர்,நேர்,நேர்": "தேமாங்காய்",
+        "நிரை,நேர்,நேர்": "புளிமாங்காய்",
+        "நிரை,நிரை,நேர்": "கருவிளங்காய்",
+        "நேர்,நிரை,நேர்": "கூவிளங்காய்",
+        "நேர்,நேர்,நிரை": "தேமாம்பழம்",
+        "நிரை,நேர்,நிரை": "புளிமாம்பழம்",
+        "நிரை,நிரை,நிரை": "கருவிளம்பழம்",
+        "நேர்,நிரை,நிரை": "கூவிளம்பழம்",
+        "நேர்,நேர்,நேர்,நேர்": "தேமா தேமா",
+        "நிரை,நேர்,நேர்,நேர்": "புளிமா தேமா",
+        "நிரை,நிரை,நேர்,நேர்": "கருவிளம் தேமா",
+      };
+
+      function getVaaypaadu(asaiTypes) {
+        let key = asaiTypes.join(",");
+        return VAAYPAADU_MAP[key] || asaiTypes.join(" + ");
+      }
+
+      // ── Core Logic ──────────────────────────────────────────────────────────
+
+      function splitKuralToWords(kuralText) {
+        kuralText = kuralText.trim();
+        let lines = kuralText.includes("\n")
+          ? kuralText.split("\n")
+          : [kuralText];
+
+        return lines
+          .map((line) => {
+            // Remove non-Tamil chars except spaces
+            let cleanLine = line.replace(/[^\u0B80-\u0BFF\s]/g, "").trim();
+            return cleanLine.split(/\s+/).filter((w) => w.length > 0);
+          })
+          .filter((lineArr) => lineArr.length > 0);
+      }
+
+      function tokenizeRaw(word) {
+        let units = [];
+        let i = 0;
+        // Basic normalization equivalent to Python's unicodedata.normalize('NFC')
+        word = word.normalize("NFC");
+
+        while (i < word.length) {
+          let char = word[i];
+          let modifier = null;
+          let surface = char;
+
+          if (
+            i + 1 < word.length &&
+            (KURIL_SIGNS.has(word[i + 1]) ||
+              NEDIL_SIGNS.has(word[i + 1]) ||
+              word[i + 1] === PULLI)
+          ) {
+            modifier = word[i + 1];
+            surface = char + modifier;
+            i += 2;
+          } else {
+            i += 1;
+          }
+
+          units.push({ surface, base: char, modifier });
+        }
+        return units;
+      }
+
+      function unitVowelType(unit) {
+        let base = unit.base;
+        let mod = unit.modifier;
+
+        if (KURIL_VOWELS.has(base)) return "kuril";
+        if (NEDIL_VOWELS.has(base)) return "nedil";
+
+        if (MEY_CONSONANTS.has(base)) {
+          if (mod === null) return "kuril";
+          if (mod === PULLI) return "mey";
+          if (KURIL_SIGNS.has(mod)) return "kuril";
+          if (NEDIL_SIGNS.has(mod)) return "nedil";
+        }
+
+        if (base === AAYTHAM) return "mey";
+
+        return "kuril";
+      }
+
+      function groupIntoAsai(units) {
+        let asaiList = [];
+        let i = 0;
+        let n = units.length;
+
+        while (i < n) {
+          let u = units[i];
+          let vtype = unitVowelType(u);
+
+          // Rule 1: Nedil = நேர்
+          if (vtype === "nedil") {
+            asaiList.push({
+              units: [u],
+              surface: u.surface,
+              asai_type: "நேர்",
+              rule: "நெடில்",
+            });
+            i++;
+          }
+          // Rule 2: Mey appends to the previous Asai
+          else if (vtype === "mey") {
+            if (asaiList.length > 0) {
+              let prev = asaiList[asaiList.length - 1];
+              prev.units.push(u);
+              prev.surface += u.surface;
+
+              if (prev.rule === "தனிக்குறில்") prev.rule = "குறில்+மெய்";
+              else if (prev.rule === "நெடில்") prev.rule = "நெடில்+மெய்";
+              else if (prev.rule === "இருக்குறில்")
+                prev.rule = "இருக்குறில்+மெய்";
+              else if (prev.rule === "குறில்+நெடில்")
+                prev.rule = "குறில்+நெடில்+மெய்";
+            } else {
+              asaiList.push({
+                units: [u],
+                surface: u.surface,
+                asai_type: "நேர்",
+                rule: "தனிமெய்",
+              });
+            }
+            i++;
+          }
+          // Rule 3: Kuril logic
+          else if (vtype === "kuril") {
+            if (i + 1 < n) {
+              let next_u = units[i + 1];
+              let next_vtype = unitVowelType(next_u);
+
+              if (next_vtype === "kuril") {
+                asaiList.push({
+                  units: [u, next_u],
+                  surface: u.surface + next_u.surface,
+                  asai_type: "நிரை",
+                  rule: "இருக்குறில்",
+                });
+                i += 2;
+              } else if (next_vtype === "nedil") {
+                asaiList.push({
+                  units: [u, next_u],
+                  surface: u.surface + next_u.surface,
+                  asai_type: "நிரை",
+                  rule: "குறில்+நெடில்",
+                });
+                i += 2;
+              } else {
+                asaiList.push({
+                  units: [u],
+                  surface: u.surface,
+                  asai_type: "நேர்",
+                  rule: "தனிக்குறில்",
+                });
+                i++;
+              }
+            } else {
+              asaiList.push({
+                units: [u],
+                surface: u.surface,
+                asai_type: "நேர்",
+                rule: "தனிக்குறில்",
+              });
+              i++;
+            }
+          }
+        }
+        return asaiList;
+      }
+
+      function analyzeWord(word) {
+        let rawUnits = tokenizeRaw(word);
+        let asaiGroups = groupIntoAsai(rawUnits);
+        let asaiTypes = asaiGroups.map((a) => a.asai_type);
+        let vaaypaadu = getVaaypaadu(asaiTypes);
+        return { asaiGroups, asaiTypes, vaaypaadu };
+      }
+
+      // ── UI Integration ──────────────────────────────────────────────────────
+
+      function processKural() {
+        const text = document.getElementById("kuralInput").value;
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = ""; // Clear previous
+
+        if (!text.trim()) return;
+
+        const lines = splitKuralToWords(text);
+
+        lines.forEach((words, lineIdx) => {
+          // Create Section for Line
+          let lineSection = document.createElement("div");
+          lineSection.className = "line-section";
+
+          let lineHeader = document.createElement("div");
+          lineHeader.className = "line-header";
+          lineHeader.innerText = `வரி ${lineIdx + 1}: ${words.join(" ")}`;
+          lineSection.appendChild(lineHeader);
+
+          let grid = document.createElement("div");
+          grid.className = "word-grid";
+
+          words.forEach((word) => {
+            let { asaiGroups, asaiTypes, vaaypaadu } = analyzeWord(word);
+
+            // Build Table Html
+            let rowsHtml = asaiGroups
+              .map(
+                (ag) =>
+                  `<tr>
+                        <td>${ag.surface}</td>
+                        <td>${ag.asai_type}</td>
+                        <td>${ag.rule}</td>
+                    </tr>`,
+              )
+              .join("");
+
+            let cardHtml = `
+                    <div class="word-card">
+                        <div class="word-title">${word}</div>
+                        <table>
+                            <thead>
+                                <tr><th>அசை</th><th>வகை</th><th>விதி</th></tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                        <div class="vaaypaadu-result">வாய்பாடு: ${vaaypaadu}</div>
+                    </div>
+                `;
+
+            grid.insertAdjacentHTML("beforeend", cardHtml);
+          });
+
+          lineSection.appendChild(grid);
+          outputDiv.appendChild(lineSection);
+        });
+      }
+
+      // Run once on load to show default text analysis
+      window.onload = processKural;
+    </script>
+  </body>
+</html>
